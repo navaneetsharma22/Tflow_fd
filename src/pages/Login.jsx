@@ -5,8 +5,9 @@ import { useToast } from '../components/ui/Toast.jsx';
 import { Input } from '../components/ui/Input.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { motion } from 'framer-motion';
-import { Mail, Lock, ArrowRight, ShieldCheck, Building } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Building } from 'lucide-react';
 import api from '../lib/api.js';
+import { TaskFlowLogo } from '../components/ui/Typography.jsx';
 
 const Login = () => {
   const { login } = useAuth();
@@ -58,7 +59,7 @@ const Login = () => {
     }
   };
 
-  // Helper to prefill developer credentials immediately for easy local validation
+  // Helper to prefill common workspace credentials immediately for easy local validation
   const prefillCredentials = (role) => {
     if (role === 'DEVELOPER') {
       setEmail('developer@taskflow.com');
@@ -79,6 +80,7 @@ const Login = () => {
       // SPECIFICATION: border radius exactly 16px (rounded-lg), padding 20px (p-5), soft shadow
       className="p-5 border border-border bg-card/40 backdrop-blur-xl rounded-lg shadow-xl space-y-5 w-full max-w-md"
     >
+      <TaskFlowLogo variant="inline" size="xs" showTagline={false} className="mb-1" wordmarkClassName="text-lg" />
       <div className="space-y-1">
         <h2 className="text-2xl font-extrabold tracking-tight">Welcome Back</h2>
         <p className="text-muted-foreground text-xs">
@@ -155,7 +157,7 @@ const Login = () => {
             onClick={() => prefillCredentials('ADMIN')}
             className="py-1.5 px-3 rounded-lg border border-border hover:border-orange-500/50 bg-muted/20 hover:bg-orange-500/5 text-[11px] font-semibold transition-all cursor-pointer text-center text-muted-foreground hover:text-foreground"
           >
-            Superadmin Account
+            Organization Admin Account
           </button>
         </div>
       </div>

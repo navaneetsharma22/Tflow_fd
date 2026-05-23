@@ -35,6 +35,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import CommandPalette from '../components/ui/CommandPalette.jsx';
+import { TaskFlowLogo } from '../components/ui/Typography.jsx';
 
 const DashboardLayout = () => {
   const { user, logout, activeOrgId, changeOrganization } = useAuth();
@@ -154,17 +155,13 @@ const DashboardLayout = () => {
 
         {/* Brand Logo */}
         <div className={`h-16 flex items-center border-b border-border gap-2 ${sidebarCollapsed ? 'justify-center px-0' : 'px-6'}`}>
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-orange-600 to-amber-500 flex items-center justify-center text-white font-extrabold text-lg shrink-0 shadow-md shadow-orange-500/20">
-            TF
-          </div>
           {!sidebarCollapsed && (
-            <motion.span
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/80 shrink-0"
-            >
-              TaskFlow<span className="text-orange-500 font-extrabold">2.0</span>
-            </motion.span>
+            <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
+              <TaskFlowLogo variant="inline" size="sm" showTagline={false} wordmarkClassName="text-xl" />
+            </motion.div>
+          )}
+          {sidebarCollapsed && (
+            <TaskFlowLogo variant="icon" size="sm" />
           )}
         </div>
 
@@ -536,9 +533,7 @@ const DashboardLayout = () => {
               className="fixed top-0 bottom-0 left-0 w-72 bg-card border-r border-border z-50 md:hidden flex flex-col"
             >
               <div className="h-16 flex items-center justify-between px-6 border-b border-border">
-                <span className="text-xl font-bold tracking-tight">
-                  TaskFlow<span className="text-orange-500 font-extrabold">2.0</span>
-                </span>
+                <TaskFlowLogo variant="inline" size="xs" showTagline={false} wordmarkClassName="text-lg" />
                 <button
                   onClick={() => setMobileMenuOpen(false)}
                   className="p-2 text-foreground rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"

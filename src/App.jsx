@@ -9,6 +9,8 @@ import DashboardLayout from './layouts/DashboardLayout.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 import Login from './pages/Login.jsx';
+import AdminLogin from './pages/AdminLogin.jsx';
+import SuperAdminLogin from './pages/SuperAdminLogin.jsx';
 import Register from './pages/Register.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Projects from './pages/Projects.jsx';
@@ -60,6 +62,8 @@ function App() {
               {/* Guest Authentication Routing */}
               <Route element={<AuthLayout />}>
                 <Route path="/login" element={<Login />} />
+                <Route path="/admin" element={<AdminLogin />} />
+                <Route path="/superadmin" element={<SuperAdminLogin />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
