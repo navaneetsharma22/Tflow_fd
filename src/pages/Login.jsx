@@ -1,15 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.jsx';
+import { useToast } from '../components/ui/Toast.jsx';
+import { Input } from '../components/ui/Input.jsx';
+import { Button } from '../components/ui/Button.jsx';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { Mail, Lock, ArrowRight, ShieldCheck, Building } from 'lucide-react';
 import api from '../lib/api.js';
 
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [organizationCode, setOrganizationCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -20,15 +26,32 @@ const Login = () => {
 
     try {
       // Direct call to our secure backend Auth API
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post('/auth/login', { email, password, organizationCode });
       
       const { token, user } = response.data;
+      
+      // If user has 2FA enabled, redirect to Verification screen
+      if (user?.twoFactorEnabled) {
+        toast({
+          title: '2FA Verification Required',
+          description: 'Please verify using your multi-factor auth code.',
+          variant: 'info',
+        });
+        navigate('/verify-2fa');
+        return;
+      }
+
       login(token, user);
+      toast({
+        title: 'Sign In Successful',
+        description: `Welcome back to TaskFlow, ${user.name}!`,
+        variant: 'success',
+      });
       navigate('/');
     } catch (err) {
       setError(
         err.response?.data?.message || 
-        'Connection rejected. Ensure the backend and Redis are running.'
+        'Connection rejected. Ensure the credentials are valid and the backend is running.'
       );
     } finally {
       setLoading(false);
@@ -40,107 +63,116 @@ const Login = () => {
     if (role === 'DEVELOPER') {
       setEmail('developer@taskflow.com');
       setPassword('Password123!');
+      setOrganizationCode('TF2');
     } else if (role === 'ADMIN') {
-      setEmail('admin@taskflow.com');
-      setPassword('Password123!');
+      setEmail('navaneet@taskflow.com');
+      setPassword('1234567');
+      setOrganizationCode('TF2');
     }
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="p-8 md:p-10 border border-border bg-card/40 backdrop-blur-xl rounded-3xl shadow-xl space-y-6"
+      transition={{ duration: 0.3 }}
+      // SPECIFICATION: border radius exactly 16px (rounded-lg), padding 20px (p-5), soft shadow
+      className="p-5 border border-border bg-card/40 backdrop-blur-xl rounded-lg shadow-xl space-y-5 w-full max-w-md"
     >
-      <div className="space-y-2">
-        <h2 className="text-3xl font-extrabold tracking-tight">Welcome Back</h2>
-        <p className="text-muted-foreground text-sm">
+      <div className="space-y-1">
+        <h2 className="text-2xl font-extrabold tracking-tight">Welcome Back</h2>
+        <p className="text-muted-foreground text-xs">
           Enter your credentials to enter your secure tenant workspace.
         </p>
       </div>
 
       {error && (
-        <div className="p-4 rounded-xl border border-destructive/20 bg-destructive/10 text-destructive text-sm font-medium">
+        <div className="p-3.5 rounded-lg border border-destructive/20 bg-destructive/5 text-destructive text-xs font-semibold">
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Email Field */}
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground/80">Email Address</label>
-          <div className="relative">
-            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. admin@taskflow.com"
-              required
-              className="w-full pl-11 pr-4 py-3 bg-muted/40 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all text-sm"
-            />
-          </div>
-        </div>
+        {/* Workspace Code Input */}
+        <Input
+          type="text"
+          label="Workspace Organization Code"
+          icon={Building}
+          placeholder="TF2"
+          value={organizationCode}
+          onChange={(e) => setOrganizationCode(e.target.value)}
+          required
+        />
 
-        {/* Password Field */}
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground/80">Password</label>
-          <div className="relative">
-            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="w-full pl-11 pr-4 py-3 bg-muted/40 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all text-sm"
-            />
+        {/* Email Input */}
+        <Input
+          type="email"
+          label="Email Address"
+          icon={Mail}
+          placeholder="admin@taskflow.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+
+        {/* Password Input */}
+        <div className="space-y-1">
+          <div className="flex justify-between items-center">
+            <label className="text-xs font-semibold text-foreground/80 tracking-wide uppercase">Password</label>
+            <Link to="/forgot-password" className="text-[11px] font-bold text-orange-500 hover:underline">
+              Forgot?
+            </Link>
           </div>
+          <Input
+            type="password"
+            icon={Lock}
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
         </div>
 
         {/* Submit Action */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-3 px-4 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-semibold text-sm transition-all duration-200 shadow-md shadow-orange-600/20 hover:shadow-orange-500/30 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer mt-6"
-        >
-          {loading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <>
-              Sign In <ArrowRight className="h-4 w-4" />
-            </>
-          )}
-        </button>
+        <Button type="submit" className="w-full mt-2" loading={loading}>
+          Sign In <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
       </form>
 
       {/* Developer Demo Prefill Quick-links */}
-      <div className="pt-4 border-t border-border space-y-3">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">
+      <div className="pt-4 border-t border-border/50 space-y-2.5">
+        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">
           Quick Prefill Dev Accounts
         </p>
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => prefillCredentials('DEVELOPER')}
-            className="py-1.5 px-3 rounded-lg border border-border hover:border-orange-500/50 bg-muted/20 hover:bg-orange-500/5 text-xs font-medium transition-all cursor-pointer text-center"
+            className="py-1.5 px-3 rounded-lg border border-border hover:border-orange-500/50 bg-muted/20 hover:bg-orange-500/5 text-[11px] font-semibold transition-all cursor-pointer text-center text-muted-foreground hover:text-foreground"
           >
             Developer Account
           </button>
           <button
             onClick={() => prefillCredentials('ADMIN')}
-            className="py-1.5 px-3 rounded-lg border border-border hover:border-orange-500/50 bg-muted/20 hover:bg-orange-500/5 text-xs font-medium transition-all cursor-pointer text-center"
+            className="py-1.5 px-3 rounded-lg border border-border hover:border-orange-500/50 bg-muted/20 hover:bg-orange-500/5 text-[11px] font-semibold transition-all cursor-pointer text-center text-muted-foreground hover:text-foreground"
           >
             Superadmin Account
           </button>
         </div>
       </div>
 
-      <div className="text-center text-sm text-muted-foreground">
-        Don't have an account?{' '}
-        <Link to="/register" className="text-orange-500 hover:text-orange-400 font-semibold transition-colors">
-          Create Workspace
-        </Link>
+      <div className="text-center text-xs text-muted-foreground space-y-2 pt-2 border-t border-border/30">
+        <div>
+          Don't have an account?{' '}
+          <Link to="/register" className="text-orange-500 hover:text-orange-400 font-bold transition-colors">
+            Create Workspace
+          </Link>
+        </div>
+        <div>
+          Got an invite code?{' '}
+          <Link to="/org-code" className="text-orange-500 hover:text-orange-400 font-bold transition-colors">
+            Join Team Workspace
+          </Link>
+        </div>
       </div>
     </motion.div>
   );

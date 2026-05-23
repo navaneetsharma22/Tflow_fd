@@ -22,8 +22,19 @@ import {
   Search,
   User,
   ShieldCheck,
-  Check
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  DollarSign,
+  Sliders,
+  ShieldAlert,
+  TrendingUp,
+  ScrollText,
+  Activity,
+  Shield,
+  BookOpen
 } from 'lucide-react';
+import CommandPalette from '../components/ui/CommandPalette.jsx';
 
 const DashboardLayout = () => {
   const { user, logout, activeOrgId, changeOrganization } = useAuth();
@@ -32,6 +43,8 @@ const DashboardLayout = () => {
   const navigate = useNavigate();
   
   // Component Layout States
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -39,22 +52,58 @@ const DashboardLayout = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
 
-  // Notifications Mock State matching secure backend notifications
+  // Notifications Mock State matching secure backend notifications with priorities
   const [notifications, setNotifications] = useState([
-    { id: 1, text: 'Sarah Connor assigned you "Setup auth encryption bounds"', read: false, time: '2 hrs ago' },
-    { id: 2, text: 'AI Risk Telemetry detected potential bottleneck in Alpha Sprint', read: false, time: '4 hrs ago' },
-    { id: 3, text: 'System check completed: circular cycle check O(1) traversal resolved', read: true, time: '1 day ago' },
+    { id: 1, text: 'Sarah Connor assigned you "Setup auth encryption bounds"', read: false, time: '2 hrs ago', priority: 'HIGH' },
+    { id: 2, text: 'AI Risk Telemetry detected potential bottleneck in Alpha Sprint', read: false, time: '4 hrs ago', priority: 'CRITICAL' },
+    { id: 3, text: 'System check completed: circular cycle check O(1) traversal resolved', read: true, time: '1 day ago', priority: 'INFO' },
   ]);
+  const [notificationFilter, setNotificationFilter] = useState('ALL'); // 'ALL', 'UNREAD'
 
-  const menuItems = [
+  const superAdminItems = [
+    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { name: 'Organizations', path: '/organizations', icon: Building },
+    { name: 'Plans & Billing', path: '/billing', icon: DollarSign },
+    { name: 'Feature Controls', path: '/features', icon: Sliders },
+    { name: 'Security', path: '/security', icon: ShieldAlert },
+    { name: 'Analytics', path: '/analytics', icon: TrendingUp },
+    { name: 'Audit Logs', path: '/audit', icon: ScrollText },
+    { name: 'System Health', path: '/health', icon: Activity },
+    { name: 'Profile Settings', path: '/settings', icon: Settings },
+  ];
+
+  const orgAdminItems = [
+    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { name: 'Employees', path: '/employees', icon: Users },
+    { name: 'Roles', path: '/roles', icon: Shield },
+    { name: 'Departments', path: '/departments', icon: Building },
+    { name: 'Projects', path: '/projects', icon: FolderKanban },
+    { name: 'Tasks', path: '/tasks', icon: CheckSquare },
+    { name: 'Reports', path: '/reports', icon: ScrollText },
+    { name: 'Analytics', path: '/analytics', icon: TrendingUp },
+    { name: 'Messages', path: '/chat', icon: MessageSquare },
+    { name: 'Wiki CMS', path: '/wiki', icon: BookOpen },
+    { name: 'Audit Logs', path: '/audit', icon: ScrollText },
+    { name: 'Organization Settings', path: '/settings', icon: Settings },
+  ];
+
+  const standardItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Projects', path: '/projects', icon: FolderKanban },
     { name: 'Tasks', path: '/tasks', icon: CheckSquare },
     { name: 'Team', path: '/team', icon: Users },
     { name: 'Chat', path: '/chat', icon: MessageSquare },
+    { name: 'Wiki CMS', path: '/wiki', icon: BookOpen },
     { name: 'AI Services', path: '/ai', icon: Sparkles },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
+
+  const menuItems =
+    user?.role === 'SUPER_ADMIN'
+      ? superAdminItems
+      : user?.role === 'ADMIN' || user?.role === 'ORG_ADMIN'
+      ? orgAdminItems
+      : standardItems;
 
   const currentOrg = user?.organizations?.find(
     (o) => (o.organizationId?._id || o.organizationId || o._id)?.toString() === activeOrgId
@@ -66,13 +115,16 @@ const DashboardLayout = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
-  // Keyboard shortcut listener to focus search box automatically when hitting "/"
+  const handleToggleRead = (id) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n)));
+  };
+
+  // Keyboard shortcut listener to toggle Command Palette on CTRL+K or CMD+K
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        const searchInput = document.getElementById('global-search-input');
-        if (searchInput) searchInput.focus();
+        setCommandPaletteOpen((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -82,27 +134,51 @@ const DashboardLayout = () => {
   return (
     <div className="flex min-h-screen bg-background text-foreground transition-colors duration-300">
       
-      {/* 1. Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-border bg-card/50 backdrop-blur-lg sticky top-0 h-screen select-none">
+      {/* Command Palette Trigger Container */}
+      <CommandPalette isOpen={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
+
+      {/* 1. Collapsible Desktop Sidebar */}
+      <aside
+        className={`hidden md:flex flex-col border-r border-border bg-card/50 backdrop-blur-lg sticky top-0 h-screen select-none transition-all duration-300 relative ${
+          sidebarCollapsed ? 'w-20' : 'w-64'
+        }`}
+      >
+        {/* Collapsible Trigger Float Button */}
+        <button
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className="absolute bottom-20 -right-3.5 h-7 w-7 rounded-full border border-border bg-card shadow-md flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer z-50 hover:scale-105 transition-all"
+          title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+        >
+          {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </button>
+
         {/* Brand Logo */}
-        <div className="h-16 flex items-center px-6 border-b border-border gap-2">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-orange-600 to-amber-500 flex items-center justify-center text-white font-extrabold text-lg shadow-md shadow-orange-500/20">
+        <div className={`h-16 flex items-center border-b border-border gap-2 ${sidebarCollapsed ? 'justify-center px-0' : 'px-6'}`}>
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-orange-600 to-amber-500 flex items-center justify-center text-white font-extrabold text-lg shrink-0 shadow-md shadow-orange-500/20">
             TF
           </div>
-          <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/80">
-            TaskFlow<span className="text-orange-500 font-extrabold">2.0</span>
-          </span>
+          {!sidebarCollapsed && (
+            <motion.span
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/80 shrink-0"
+            >
+              TaskFlow<span className="text-orange-500 font-extrabold">2.0</span>
+            </motion.span>
+          )}
         </div>
 
         {/* Navigation Link Lists */}
-        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+        <nav className={`flex-1 py-6 space-y-1.5 overflow-y-auto ${sidebarCollapsed ? 'px-2' : 'px-4'}`}>
           {menuItems.map((item) => {
             const isActive = location.pathname === item.path;
             const Icon = item.icon;
             return (
-              <Link key={item.path} to={item.path}>
+              <Link key={item.path} to={item.path} title={sidebarCollapsed ? item.name : undefined}>
                 <div
                   className={`flex items-center gap-3.5 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 relative group cursor-pointer ${
+                    sidebarCollapsed ? 'justify-center px-0' : ''
+                  } ${
                     isActive
                       ? 'text-orange-500 bg-orange-500/10'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -115,8 +191,16 @@ const DashboardLayout = () => {
                       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                     />
                   )}
-                  <Icon className={`h-5 w-5 ${isActive ? 'text-orange-500' : 'text-muted-foreground group-hover:text-foreground'}`} />
-                  {item.name}
+                  <Icon className={`h-5 w-5 shrink-0 ${isActive ? 'text-orange-500' : 'text-muted-foreground group-hover:text-foreground'}`} />
+                  {!sidebarCollapsed && (
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="truncate"
+                    >
+                      {item.name}
+                    </motion.span>
+                  )}
                 </div>
               </Link>
             );
@@ -124,24 +208,28 @@ const DashboardLayout = () => {
         </nav>
 
         {/* User Footers profile */}
-        <div className="p-4 border-t border-border bg-card/30">
-          <div className="flex items-center justify-between">
+        <div className={`p-4 border-t border-border bg-card/30 ${sidebarCollapsed ? 'flex justify-center' : ''}`}>
+          <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-orange-500/20 flex items-center justify-center font-bold text-orange-500 uppercase">
+              <div className="h-10 w-10 rounded-full bg-orange-500/20 flex items-center justify-center font-bold text-orange-500 uppercase shrink-0">
                 {user?.name?.slice(0, 2)}
               </div>
-              <div className="max-w-[120px] overflow-hidden">
-                <p className="text-sm font-semibold truncate leading-tight">{user?.name}</p>
-                <p className="text-xs text-muted-foreground truncate capitalize">{user?.role?.toLowerCase()}</p>
-              </div>
+              {!sidebarCollapsed && (
+                <div className="max-w-[110px] overflow-hidden">
+                  <p className="text-sm font-semibold truncate leading-tight">{user?.name}</p>
+                  <p className="text-xs text-muted-foreground truncate capitalize">{user?.role?.toLowerCase()}</p>
+                </div>
+              )}
             </div>
-            <button
-              onClick={logout}
-              className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer"
-              title="Logout"
-            >
-              <LogOut className="h-5 w-5" />
-            </button>
+            {!sidebarCollapsed && (
+              <button
+                onClick={logout}
+                className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer shrink-0"
+                title="Logout"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
+            )}
           </div>
         </div>
       </aside>
@@ -156,7 +244,7 @@ const DashboardLayout = () => {
           <div className="flex items-center gap-4 flex-1">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-foreground rounded-lg hover:bg-muted/50 transition-colors"
+              className="md:hidden p-2 text-foreground rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -171,7 +259,7 @@ const DashboardLayout = () => {
                 }}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border hover:bg-muted/50 transition-colors text-sm font-medium cursor-pointer"
               >
-                <Building className="h-4 w-4 text-orange-500" />
+                <Building className="h-4 w-4 text-orange-500 animate-pulse" />
                 <span className="max-w-[120px] sm:max-w-[150px] truncate">
                   {currentOrg?.name || currentOrg?.organizationId?.name || 'Select Workspace'}
                 </span>
@@ -218,48 +306,18 @@ const DashboardLayout = () => {
               </AnimatePresence>
             </div>
 
-            {/* Integrated Search Box */}
-            <div className="relative hidden lg:block w-72 max-w-xs">
+            {/* Integrated Search Box Triggering Command Palette */}
+            <div
+              onClick={() => setCommandPaletteOpen(true)}
+              className="relative hidden lg:block w-72 max-w-xs cursor-pointer select-none"
+            >
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                id="global-search-input"
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-                placeholder="Search workspace (Press /)"
-                className="w-full pl-10 pr-10 py-2 bg-muted/40 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-xs font-medium"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold bg-muted/80 text-muted-foreground px-1.5 py-0.5 rounded border border-border">
-                /
-              </span>
-
-              {/* Search Suggestions Panel */}
-              <AnimatePresence>
-                {searchFocused && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="absolute top-full left-0 right-0 mt-2 border border-border bg-card rounded-2xl shadow-xl overflow-hidden"
-                  >
-                    <div className="p-3 border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      Recent Queries
-                    </div>
-                    <div className="py-1">
-                      <div className="px-4 py-2 text-xs text-muted-foreground hover:bg-muted/50 cursor-pointer flex items-center justify-between">
-                        <span>Alpha SaaS Engine</span>
-                        <ChevronDown className="h-3 w-3 -rotate-90" />
-                      </div>
-                      <div className="px-4 py-2 text-xs text-muted-foreground hover:bg-muted/50 cursor-pointer flex items-center justify-between">
-                        <span>Setup auth encryption bounds</span>
-                        <ChevronDown className="h-3 w-3 -rotate-90" />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <div className="w-full pl-10 pr-16 py-2 bg-muted/40 border border-border rounded-xl text-muted-foreground text-xs font-medium hover:bg-muted/60 transition-colors flex items-center justify-between">
+                <span>Search dashboard commands...</span>
+                <span className="text-[10px] font-bold bg-muted/80 text-muted-foreground px-1.5 py-0.5 rounded border border-border">
+                  ⌘K
+                </span>
+              </div>
             </div>
           </div>
 
@@ -317,24 +375,69 @@ const DashboardLayout = () => {
                           </button>
                         )}
                       </div>
+
+                      {/* Filter tabs */}
+                      <div className="flex px-4 py-1.5 bg-muted/10 border-b border-border/80 text-[10px] font-bold gap-2">
+                        <button
+                          onClick={() => setNotificationFilter('ALL')}
+                          className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                            notificationFilter === 'ALL'
+                              ? 'bg-orange-500 text-white'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          All ({notifications.length})
+                        </button>
+                        <button
+                          onClick={() => setNotificationFilter('UNREAD')}
+                          className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                            notificationFilter === 'UNREAD'
+                              ? 'bg-orange-500 text-white'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          Unread ({unreadCount})
+                        </button>
+                      </div>
                       
-                      <div className="max-h-72 overflow-y-auto divide-y divide-border/50">
-                        {notifications.map((n) => (
-                          <div
-                            key={n.id}
-                            className={`p-3.5 text-xs transition-colors flex items-start justify-between gap-2.5 ${
-                              n.read ? 'opacity-70 bg-card' : 'bg-orange-500/5'
-                            }`}
-                          >
-                            <div className="space-y-0.5">
-                              <p className="font-semibold text-foreground/90">{n.text}</p>
-                              <span className="text-[10px] text-muted-foreground">{n.time}</span>
+                      <div className="max-h-72 overflow-y-auto divide-y divide-border/50 select-none">
+                        {notifications
+                          .filter((n) => notificationFilter === 'ALL' || !n.read)
+                          .map((n) => (
+                            <div
+                              key={n.id}
+                              onClick={() => handleToggleRead(n.id)}
+                              className={`p-3.5 text-xs transition-colors flex items-start justify-between gap-3 cursor-pointer hover:bg-muted/30 ${
+                                n.read ? 'opacity-70 bg-card' : 'bg-orange-500/5'
+                              }`}
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`h-2 w-2 rounded-full shrink-0 ${
+                                    n.priority === 'CRITICAL'
+                                      ? 'bg-rose-500'
+                                      : n.priority === 'HIGH'
+                                      ? 'bg-amber-500'
+                                      : 'bg-blue-500'
+                                  }`} title={`${n.priority} priority`} />
+                                  <span className="text-[9px] font-extrabold text-muted-foreground uppercase tracking-wider">
+                                    {n.priority}
+                                  </span>
+                                </div>
+                                <p className="font-semibold text-foreground/90 leading-normal">{n.text}</p>
+                                <span className="text-[9px] text-muted-foreground block font-mono">{n.time}</span>
+                              </div>
+                              {!n.read && (
+                                <div className="h-1.5 w-1.5 rounded-full bg-orange-500 shrink-0 mt-1.5" />
+                              )}
                             </div>
-                            {!n.read && (
-                              <div className="h-2 w-2 rounded-full bg-orange-500 shrink-0 mt-1" />
-                            )}
+                          ))}
+
+                        {notifications.filter((n) => notificationFilter === 'ALL' || !n.read).length === 0 && (
+                          <div className="text-center p-6 text-xs text-muted-foreground">
+                            No notifications to display
                           </div>
-                        ))}
+                        )}
                       </div>
                     </motion.div>
                   </>
