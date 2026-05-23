@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TaskFlow 2.0 — Hardened SaaS Collaboration Engine</title>
+    <meta name="description" content="Secure, high-scale enterprise multi-tenant collaborative management platform with real-time sockets and AI telemetry risk analysis." />
+    
+    <!-- INFRASTRUCTURE: Prevent dark mode white flashes before React bootstraps -->
+    <script>
+      (function() {
+        const savedTheme = localStorage.getItem('taskflow_theme');
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+          document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = 'dark';
+        } else {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.style.colorScheme = 'light';
+        }
+      })();
+    </script>
+  </head>
+  <body class="bg-background text-foreground antialiased selection:bg-orange-500/30">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

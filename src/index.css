@@ -1,0 +1,152 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  
+  --color-card: var(--card);
+  --color-card-foreground: var(--color-card-foreground);
+  
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+@layer base {
+  :root {
+    /* Precise Light Mode Color Mapping */
+    --background: #FFFFFF;
+    --foreground: #0F172A;
+
+    --card: #F8FAFC;
+    --card-foreground: #0F172A;
+ 
+    --popover: #FFFFFF;
+    --popover-foreground: #0F172A;
+
+    --primary: #F97316; /* Primary Orange */
+    --primary-foreground: #FFFFFF;
+
+    --secondary: #CBD5E1; /* Slate Gray */
+    --secondary-foreground: #0F172A;
+
+    --muted: #F1F5F9;
+    --muted-foreground: #64748B;
+
+    --accent: #FB923C; /* Accent Orange */
+    --accent-foreground: #FFFFFF;
+
+    --destructive: #EF4444; /* Danger */
+    --destructive-foreground: #FFFFFF;
+
+    --border: #E2E8F0;
+    --input: #E2E8F0;
+    --ring: #F97316;
+
+    /* SPECIFICATION: Border Radius exactly 16px */
+    --radius: 1rem;
+  }
+ 
+  .dark {
+    /* Precise Dark Mode Brand Color Mapping (User requested colors) */
+    --background: #0F172A; /* Background Slate */
+    --foreground: #F8FAFC; /* Text Slate */
+
+    --card: #1E293B; /* Card Slate */
+    --card-foreground: #F8FAFC;
+ 
+    --popover: #0F172A;
+    --popover-foreground: #F8FAFC;
+
+    --primary: #F97316; /* Primary Orange */
+    --primary-foreground: #F8FAFC;
+
+    --secondary: #CBD5E1; /* Secondary Text Slate */
+    --secondary-foreground: #F8FAFC;
+
+    --muted: #334155; /* Border Slate used as muted background fill */
+    --muted-foreground: #CBD5E1;
+
+    --accent: #FB923C; /* Accent Orange */
+    --accent-foreground: #F8FAFC;
+
+    --destructive: #EF4444; /* Danger Red */
+    --destructive-foreground: #F8FAFC;
+
+    --border: #334155; /* Border Slate */
+    --input: #334155;
+    --ring: #F97316;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased transition-colors duration-300;
+    font-family: 'Outfit', sans-serif;
+  }
+}
+
+/* Glassmorphism custom classes optimized for slate dark backgrounds */
+.glass {
+  background: rgba(30, 41, 59, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-light {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Custom soft shadow specification */
+.soft-shadow {
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 8px -1px rgba(15, 23, 42, 0.04);
+}
+
+.dark .soft-shadow {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3), 0 2px 8px -1px rgba(0, 0, 0, 0.2);
+}
+
+/* Scrollbar customizations matching primary orange and slate borders */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
