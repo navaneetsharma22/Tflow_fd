@@ -1,15 +1,41 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card.jsx';
 import { Badge } from '../components/ui/Badge.jsx';
 import { Cpu, HardDrive, Network, Database } from 'lucide-react';
+import api from '../lib/api.js';
 
 const SystemHealth = () => {
-  const services = [
-    { name: 'API Server Nodes (Load Balancer)', status: 'HEALTHY', latency: '12ms', details: 'Express.js microservices active' },
-    { name: 'Database Cluster (Mongoose)', status: 'HEALTHY', latency: '4ms', details: 'MongoDB persistent connections active' },
-    { name: 'Caching Node (Redis Cache)', status: 'HEALTHY', latency: '1ms', details: 'Redis in-memory caching active' },
-    { name: 'Task Queues Worker (BullMQ)', status: 'HEALTHY', latency: '24ms', details: 'Background message workers active' },
-  ];
+  const [health, setHealth] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadHealth = async () => {
+      try {
+        const response = await api.get('/health');
+        const payload = response.data?.data ?? response.data;
+        if (!cancelled) {
+          setHealth(payload);
+        }
+      } catch {
+        if (!cancelled) {
+          setHealth(null);
+        }
+      }
+    };
+
+    loadHealth();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const services = health?.services
+    ? [
+        { name: 'Database Cluster', status: health.services.database, latency: '—', details: 'MongoDB readiness reported by backend' },
+        { name: 'Cache Layer', status: health.services.cache, latency: '—', details: 'Cache readiness reported by backend' },
+      ]
+    : [];
 
   return (
     <div className="space-y-6">
@@ -29,8 +55,8 @@ const SystemHealth = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between items-baseline">
-              <span className="text-2xl font-extrabold">24.8%</span>
-              <span className="text-xs font-semibold text-muted-foreground">Load average: 0.12</span>
+              <span className="text-2xl font-extrabold">{health?.memory?.heapUsedMb ? `${health.memory.heapUsedMb} MB` : '—'}</span>
+              <span className="text-xs font-semibold text-muted-foreground">{health?.uptimeSeconds ? `Uptime: ${health.uptimeSeconds}s` : 'Waiting for backend health'}</span>
             </div>
             <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
               <div className="h-full bg-orange-500" style={{ width: '25%' }} />
@@ -45,8 +71,8 @@ const SystemHealth = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between items-baseline">
-              <span className="text-2xl font-extrabold">4.22 GB</span>
-              <span className="text-xs font-semibold text-muted-foreground">allocated of 8.00 GB</span>
+              <span className="text-2xl font-extrabold">{health?.memory?.rssMb ? `${health.memory.rssMb} MB` : '—'}</span>
+              <span className="text-xs font-semibold text-muted-foreground">{health?.memory?.heapTotalMb ? `heap total ${health.memory.heapTotalMb} MB` : 'Waiting for backend health'}</span>
             </div>
             <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
               <div className="h-full bg-blue-500" style={{ width: '53%' }} />
@@ -61,8 +87,8 @@ const SystemHealth = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between items-baseline">
-              <span className="text-2xl font-extrabold">1,492 / sec</span>
-              <span className="text-xs font-semibold text-muted-foreground">Cache hit-rate: 98.4%</span>
+              <span className="text-2xl font-extrabold">{health?.services?.cache ? 'Live' : '—'}</span>
+              <span className="text-xs font-semibold text-muted-foreground">{health?.services?.cache || 'Waiting for backend health'}</span>
             </div>
             <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
               <div className="h-full bg-emerald-500" style={{ width: '88%' }} />
@@ -78,26 +104,30 @@ const SystemHealth = () => {
           <CardDescription>Live health checks reporting heartbeats across background nodes.</CardDescription>
         </CardHeader>
         <CardContent className="divide-y divide-border/50">
-          {services.map((srv, idx) => (
-            <div key={idx} className="flex items-center justify-between py-4.5 first:pt-0 last:pb-0 gap-6 select-none">
-              <div className="flex items-start gap-4">
-                <div className="h-9 w-9 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 shrink-0 mt-0.5">
-                  <Database className="h-4.5 w-4.5" />
+          {services.length > 0 ? (
+            services.map((srv, idx) => (
+              <div key={idx} className="flex items-center justify-between py-4.5 first:pt-0 last:pb-0 gap-6 select-none">
+                <div className="flex items-start gap-4">
+                  <div className="h-9 w-9 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 shrink-0 mt-0.5">
+                    <Database className="h-4.5 w-4.5" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-sm font-bold text-foreground">{srv.name}</span>
+                    <p className="text-xs text-muted-foreground">{srv.details}</p>
+                  </div>
                 </div>
-                <div className="space-y-0.5">
-                  <span className="text-sm font-bold text-foreground">{srv.name}</span>
-                  <p className="text-xs text-muted-foreground">{srv.details}</p>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-xs font-semibold text-muted-foreground">{srv.latency}</span>
-                <Badge variant="success" className="font-extrabold text-[9px] px-2 py-0">
-                  {srv.status}
-                </Badge>
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-xs font-semibold text-muted-foreground">{srv.latency}</span>
+                  <Badge variant="success" className="font-extrabold text-[9px] px-2 py-0">
+                    {srv.status}
+                  </Badge>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <div className="py-4 text-xs text-muted-foreground">No live service telemetry available.</div>
+          )}
         </CardContent>
       </Card>
     </div>

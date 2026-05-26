@@ -27,9 +27,16 @@ const AdminLogin = () => {
 
     try {
       const response = await api.post('/auth/login', { email, password, organizationCode });
-      const { token, user } = response.data;
+      const payload = response.data?.data ?? response.data;
+      const token = payload?.token || payload?.accessToken;
+      const user = payload?.user;
+
+      if (!token || !user) {
+        throw new Error('Invalid auth response received from the backend.');
+      }
 
       if (user?.twoFactorEnabled) {
+        login(token, user);
         toast({
           title: '2FA Verification Required',
           description: 'Please verify using your multi-factor auth code.',

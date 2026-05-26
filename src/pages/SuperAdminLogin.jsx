@@ -13,10 +13,11 @@ const SuperAdminLogin = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const superAdminOrgCode = import.meta.env.VITE_SUPER_ADMIN_ORG_CODE || '';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [organizationCode] = useState('TF2');
+  const [organizationCode] = useState(superAdminOrgCode);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -27,9 +28,16 @@ const SuperAdminLogin = () => {
 
     try {
       const response = await api.post('/auth/login', { email, password, organizationCode });
-      const { token, user } = response.data;
+      const payload = response.data?.data ?? response.data;
+      const token = payload?.token || payload?.accessToken;
+      const user = payload?.user;
+
+      if (!token || !user) {
+        throw new Error('Invalid auth response received from the backend.');
+      }
 
       if (user?.twoFactorEnabled) {
+        login(token, user);
         toast({
           title: '2FA Verification Required',
           description: 'Please verify using your multi-factor auth code.',
@@ -54,11 +62,6 @@ const SuperAdminLogin = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const prefillCredentials = () => {
-    setEmail('navaneet@taskflow.com');
-    setPassword('1234567');
   };
 
   return (
@@ -93,7 +96,7 @@ const SuperAdminLogin = () => {
           </label>
           <div className="flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 px-4 py-3 text-sm text-violet-100/90">
             <Building className="h-4 w-4 text-violet-300" />
-            <span className="font-mono font-semibold">TF2</span>
+            <span className="font-mono font-semibold">{organizationCode || 'Configure VITE_SUPER_ADMIN_ORG_CODE'}</span>
             <span className="text-[11px] text-violet-200/70">locked for platform access</span>
           </div>
         </div>
@@ -102,7 +105,7 @@ const SuperAdminLogin = () => {
           type="email"
           label="Email Address"
           icon={Mail}
-          placeholder="navaneet@taskflow.com"
+          placeholder="platform-admin@company.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -127,7 +130,7 @@ const SuperAdminLogin = () => {
 
         <Button
           type="submit"
-          className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-500 shadow-violet-500/20 hover:from-violet-500 hover:to-fuchsia-400"
+          className="w-full bg-linear-to-r from-violet-600 to-fuchsia-500 shadow-violet-500/20 hover:from-violet-500 hover:to-fuchsia-400"
           loading={loading}
         >
           Enter Console <ArrowRight className="ml-2 h-4 w-4" />
@@ -136,18 +139,6 @@ const SuperAdminLogin = () => {
 
       <div className="rounded-lg border border-violet-500/10 bg-violet-500/5 p-3 text-xs text-violet-100/85">
         This console is isolated from the main workspace login flow.
-      </div>
-
-      <div className="pt-4 border-t border-border/50 space-y-2.5">
-        <p className="text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-          Quick Prefill Super Admin Account
-        </p>
-        <button
-          onClick={prefillCredentials}
-          className="w-full rounded-lg border border-violet-500/20 bg-violet-500/10 px-3 py-1.5 text-center text-[11px] font-semibold text-violet-100 transition-all hover:bg-violet-500/15 hover:text-white"
-        >
-          Load Super Admin Account
-        </button>
       </div>
 
       <div className="text-center text-xs text-muted-foreground">

@@ -28,11 +28,17 @@ const Login = () => {
     try {
       // Direct call to our secure backend Auth API
       const response = await api.post('/auth/login', { email, password, organizationCode });
-      
-      const { token, user } = response.data;
+      const payload = response.data?.data ?? response.data;
+      const token = payload?.token || payload?.accessToken;
+      const user = payload?.user;
+
+      if (!token || !user) {
+        throw new Error('Invalid auth response received from the backend.');
+      }
       
       // If user has 2FA enabled, redirect to Verification screen
       if (user?.twoFactorEnabled) {
+        login(token, user);
         toast({
           title: '2FA Verification Required',
           description: 'Please verify using your multi-factor auth code.',
@@ -56,19 +62,6 @@ const Login = () => {
       );
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Helper to prefill common workspace credentials immediately for easy local validation
-  const prefillCredentials = (role) => {
-    if (role === 'DEVELOPER') {
-      setEmail('developer@taskflow.com');
-      setPassword('Password123!');
-      setOrganizationCode('TF2');
-    } else if (role === 'ADMIN') {
-      setEmail('navaneet@taskflow.com');
-      setPassword('1234567');
-      setOrganizationCode('TF2');
     }
   };
 
@@ -111,7 +104,7 @@ const Login = () => {
           type="email"
           label="Email Address"
           icon={Mail}
-          placeholder="admin@taskflow.com"
+          placeholder="name@company.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -140,27 +133,6 @@ const Login = () => {
           Sign In <ArrowRight className="h-4 w-4 ml-2" />
         </Button>
       </form>
-
-      {/* Developer Demo Prefill Quick-links */}
-      <div className="pt-4 border-t border-border/50 space-y-2.5">
-        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center">
-          Quick Prefill Dev Accounts
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => prefillCredentials('DEVELOPER')}
-            className="py-1.5 px-3 rounded-lg border border-border hover:border-orange-500/50 bg-muted/20 hover:bg-orange-500/5 text-[11px] font-semibold transition-all cursor-pointer text-center text-muted-foreground hover:text-foreground"
-          >
-            Developer Account
-          </button>
-          <button
-            onClick={() => prefillCredentials('ADMIN')}
-            className="py-1.5 px-3 rounded-lg border border-border hover:border-orange-500/50 bg-muted/20 hover:bg-orange-500/5 text-[11px] font-semibold transition-all cursor-pointer text-center text-muted-foreground hover:text-foreground"
-          >
-            Organization Admin Account
-          </button>
-        </div>
-      </div>
 
       <div className="text-center text-xs text-muted-foreground space-y-2 pt-2 border-t border-border/30">
         <div>

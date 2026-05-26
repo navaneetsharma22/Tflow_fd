@@ -44,22 +44,6 @@ const CommandPalette = ({ isOpen, onClose }) => {
     { id: 'team', name: 'Go to Team Management', type: 'Page', icon: Users, action: () => navigate('/team') },
     { id: 'ai', name: 'Go to AI Analytics Services', type: 'Page', icon: Sparkles, action: () => navigate('/ai') },
     { id: 'settings', name: 'Go to Settings', type: 'Page', icon: Settings, action: () => navigate('/settings') },
-    
-    // Projects
-    { id: 'p-1', name: 'Alpha SaaS Engine project', type: 'Project', icon: Folder, action: () => { navigate('/projects'); toast({ title: 'Navigated to Project', description: 'Selected Alpha SaaS Engine project.' }); } },
-    { id: 'p-2', name: 'Beta Mobile Port project', type: 'Project', icon: Folder, action: () => { navigate('/projects'); toast({ title: 'Navigated to Project', description: 'Selected Beta Mobile Port project.' }); } },
-
-    // Tasks
-    { id: 't-1', name: 'Setup auth encryption bounds task', type: 'Task', icon: CheckSquare, action: () => { navigate('/tasks'); toast({ title: 'Navigated to Task', description: 'Selected Setup auth encryption bounds task.' }); } },
-    { id: 't-2', name: 'Implement DFS task validations check task', type: 'Task', icon: CheckSquare, action: () => { navigate('/tasks'); toast({ title: 'Navigated to Task', description: 'Selected Implement DFS task validations check task.' }); } },
-
-    // Users
-    { id: 'u-1', name: 'Sarah Connor (Operations Lead)', type: 'User', icon: Users, action: () => { navigate('/chat'); toast({ title: 'Open Direct Message', description: 'Opening DM with Sarah Connor.' }); } },
-    { id: 'u-2', name: 'John Connor (Developer Profile)', type: 'User', icon: Users, action: () => { navigate('/chat'); toast({ title: 'Open Direct Message', description: 'Opening DM with John Connor.' }); } },
-
-    // Comments
-    { id: 'c-1', name: 'Sarah Connor: Confirming whitelisting middleware runs in O(1) bounds.', type: 'Comment', icon: MessageSquare, action: () => { navigate('/tasks'); toast({ title: 'View Task Comment', description: 'Opening task discussion thread comment.' }); } },
-    { id: 'c-2', name: 'John Connor: Whitelist verification token scopes validated.', type: 'Comment', icon: MessageSquare, action: () => { navigate('/tasks'); toast({ title: 'View Task Comment', description: 'Opening task discussion thread comment.' }); } },
 
     // Actions
     { id: 'theme', name: 'Toggle Dark / Light Theme', type: 'Action', icon: isDark ? Sun : Moon, action: () => toggleTheme() },

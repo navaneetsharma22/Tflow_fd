@@ -29,7 +29,13 @@ const Register = () => {
         organizationName: orgName,
       });
 
-      const { token, user } = response.data;
+      const payload = response.data?.data ?? response.data;
+      const token = payload?.token || payload?.accessToken;
+      const user = payload?.user;
+
+      if (!token || !user) {
+        throw new Error('Invalid auth response received from the backend.');
+      }
       login(token, user);
       navigate('/');
     } catch (err) {
@@ -72,7 +78,7 @@ const Register = () => {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. John Doe"
+              placeholder="Your full name"
               required
               className="w-full pl-11 pr-4 py-3 bg-muted/40 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all text-sm"
             />
@@ -88,7 +94,7 @@ const Register = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. john@company.com"
+              placeholder="name@company.com"
               required
               className="w-full pl-11 pr-4 py-3 bg-muted/40 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all text-sm"
             />
@@ -104,7 +110,7 @@ const Register = () => {
               type="text"
               value={orgName}
               onChange={(e) => setOrgName(e.target.value)}
-              placeholder="e.g. Acme Corporation"
+              placeholder="Organization name"
               required
               className="w-full pl-11 pr-4 py-3 bg-muted/40 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all text-sm"
             />

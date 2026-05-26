@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import CommandPalette from '../components/ui/CommandPalette.jsx';
 import { TaskFlowLogo } from '../components/ui/Typography.jsx';
+import api from '../lib/api.js';
 
 const DashboardLayout = () => {
   const { user, logout, activeOrgId, changeOrganization } = useAuth();
@@ -53,12 +54,7 @@ const DashboardLayout = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
 
-  // Notifications Mock State matching secure backend notifications with priorities
-  const [notifications, setNotifications] = useState([
-    { id: 1, text: 'Sarah Connor assigned you "Setup auth encryption bounds"', read: false, time: '2 hrs ago', priority: 'HIGH' },
-    { id: 2, text: 'AI Risk Telemetry detected potential bottleneck in Alpha Sprint', read: false, time: '4 hrs ago', priority: 'CRITICAL' },
-    { id: 3, text: 'System check completed: circular cycle check O(1) traversal resolved', read: true, time: '1 day ago', priority: 'INFO' },
-  ]);
+  const [notifications, setNotifications] = useState([]);
   const [notificationFilter, setNotificationFilter] = useState('ALL'); // 'ALL', 'UNREAD'
 
   const superAdminItems = [
@@ -130,6 +126,45 @@ const DashboardLayout = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadNotifications = async () => {
+      try {
+        const response = await api.get('/notifications');
+        const payload = response.data?.data ?? response.data;
+        const items = Array.isArray(payload?.items)
+          ? payload.items
+          : Array.isArray(payload?.notifications)
+          ? payload.notifications
+          : Array.isArray(payload)
+          ? payload
+          : [];
+
+        if (!cancelled) {
+          setNotifications(
+            items.map((item, index) => ({
+              id: item._id || item.id || index,
+              text: item.message || item.text || 'Notification',
+              read: Boolean(item.isRead ?? item.read),
+              time: item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Recently',
+              priority: item.priority || 'INFO',
+            }))
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setNotifications([]);
+        }
+      }
+    };
+
+    loadNotifications();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (

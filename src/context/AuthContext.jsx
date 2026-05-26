@@ -14,10 +14,16 @@ export const AuthProvider = ({ children }) => {
     const savedUser = localStorage.getItem('taskflow_user');
     const savedOrgId = localStorage.getItem('taskflow_org_id');
 
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-      setActiveOrgId(savedOrgId);
+    if (savedToken && savedToken !== 'undefined' && savedUser && savedUser !== 'undefined') {
+      try {
+        setToken(savedToken);
+        setUser(JSON.parse(savedUser));
+        setActiveOrgId(savedOrgId);
+      } catch (error) {
+        localStorage.removeItem('taskflow_token');
+        localStorage.removeItem('taskflow_user');
+        localStorage.removeItem('taskflow_org_id');
+      }
     }
     setLoading(false);
   }, []);
@@ -29,12 +35,16 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('taskflow_token', newToken);
     localStorage.setItem('taskflow_user', JSON.stringify(newUser));
 
-    // Auto-select first user organization if available
-    if (newUser.organizations && newUser.organizations.length > 0) {
-      const firstOrg = newUser.organizations[0].organizationId || newUser.organizations[0]._id;
-      if (firstOrg) {
-        changeOrganization(firstOrg.toString());
-      }
+    const primaryOrgId =
+      newUser?.organizationId?._id ||
+      newUser?.organizationId ||
+      newUser?.organizations?.[0]?.organizationId ||
+      newUser?.organizations?.[0]?._id ||
+      newUser?.organizations?.[0];
+
+    if (primaryOrgId) {
+      setActiveOrgId(primaryOrgId.toString());
+      localStorage.setItem('taskflow_org_id', primaryOrgId.toString());
     }
   };
 
