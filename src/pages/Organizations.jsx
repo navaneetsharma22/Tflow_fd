@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, ChevronLeft, ChevronRight, Building } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Search, Filter, ShieldAlert, Key, UserMinus, UserCheck, ChevronLeft, ChevronRight, X, Building, Check } from 'lucide-react';
 import { Button } from '../components/ui/Button.jsx';
 import { Input } from '../components/ui/Input.jsx';
 import { Badge } from '../components/ui/Badge.jsx';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import { useToast } from '../components/ui/Toast.jsx';
+import { useAuth } from '../hooks/useAuth.jsx';
+import api from '../lib/api.js';
 
 const Organizations = () => {
   const { toast } = useToast();
@@ -26,11 +29,16 @@ const Organizations = () => {
   
   // Modals
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
   
   // Create Form States
   const [newOrgName, setNewOrgName] = useState('');
   const [newOrgSlug, setNewOrgSlug] = useState('');
   const [newOrgLimit, setNewOrgLimit] = useState('50');
+
+  // Generated Code State
+  const [generatedCode, setGeneratedCode] = useState('');
+  const [selectedOrgForCode, setSelectedOrgForCode] = useState(null);
 
   // Pagination Logic
   const itemsPerPage = 5;
@@ -68,6 +76,64 @@ const Organizations = () => {
     toast({ title: 'Workspace Established', description: `Tenant partition "${newOrgName}" successfully created!`, variant: 'success' });
   };
 
+  const handleGenerateCode = (org) => {
+    setSelectedOrgForCode(org);
+    const newCode = `TF-${org.slug.slice(0, 3).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+    setGeneratedCode(newCode);
+    setInviteModalOpen(true);
+  };
+
+  const handleToggleSuspend = (id) => {
+    setOrgs((prev) =>
+      prev.map((o) => {
+        if (o.id === id) {
+          const wasActive = o.status === 'ACTIVE';
+          const newStatus = wasActive ? 'SUSPENDED' : 'ACTIVE';
+          toast({
+            title: wasActive ? 'Tenant Suspended' : 'Tenant Restored',
+            description: `Workspace partition "${o.name}" status set to ${newStatus}.`,
+            variant: wasActive ? 'destructive' : 'success',
+          });
+          return { ...o, status: newStatus };
+        }
+        return o;
+      })
+    );
+  };
+
+  // Super Admin delete flow
+  const { user } = useAuth();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [orgToDelete, setOrgToDelete] = useState(null);
+  const [permanentDelete, setPermanentDelete] = useState(false);
+
+  const openDeleteModal = (org) => {
+    setOrgToDelete(org);
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!orgToDelete) return;
+    try {
+      // Attempt backend deletion (requires SUPER_ADMIN privileges)
+      if (permanentDelete) {
+        // include explicit confirm query param to satisfy server-side safeguard
+        await api.delete(`/superadmin/organizations/${orgToDelete.id}/permanent?confirm=1`);
+      } else {
+        await api.delete(`/superadmin/organizations/${orgToDelete.id}`);
+      }
+      setOrgs((prev) => prev.filter((o) => o.id !== orgToDelete.id));
+      toast({ title: permanentDelete ? 'Organization Permanently Removed' : 'Organization Removed', description: `${orgToDelete.name} has been removed.`, variant: 'success' });
+    } catch (err) {
+      // If backend not available, fall back to local removal for demo mode
+      setOrgs((prev) => prev.filter((o) => o.id !== orgToDelete.id));
+      toast({ title: 'Deletion Simulated', description: `Removed ${orgToDelete.name} locally (backend may be unavailable).`, variant: 'warning' });
+    } finally {
+      setDeleteModalOpen(false);
+      setOrgToDelete(null);
+      setPermanentDelete(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -126,6 +192,7 @@ const Organizations = () => {
               <TableHead>Status</TableHead>
               <TableHead>Active Users</TableHead>
               <TableHead>Storage Usage</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -156,6 +223,37 @@ const Organizations = () => {
                   </TableCell>
                   <TableCell className="text-xs font-semibold">{org.users} Members</TableCell>
                   <TableCell className="text-xs font-mono text-muted-foreground">{org.storage}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => handleGenerateCode(org)}
+                        className="p-1.5 rounded-md hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                        title="Generate Invite Code"
+                      >
+                        <Key className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleToggleSuspend(org.id)}
+                        className={`p-1.5 rounded-md hover:bg-muted/50 transition-colors cursor-pointer ${
+                          org.status === 'ACTIVE'
+                            ? 'text-rose-500 hover:text-rose-600'
+                            : 'text-emerald-500 hover:text-emerald-600'
+                        }`}
+                        title={org.status === 'ACTIVE' ? 'Suspend Partition' : 'Restore Partition'}
+                      >
+                        {org.status === 'ACTIVE' ? <UserMinus className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                      </button>
+                      {user?.role === 'SUPER_ADMIN' && (
+                        <button
+                          onClick={() => openDeleteModal(org)}
+                          className="p-1.5 rounded-md hover:bg-muted/50 text-rose-500 hover:text-rose-600 transition-colors cursor-pointer"
+                          title="Delete Organization"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
@@ -240,6 +338,46 @@ const Organizations = () => {
             <Button type="submit">Establish Partition</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* 6. generated invite code Modal */}
+      <Modal
+        isOpen={inviteModalOpen}
+        onClose={() => setInviteModalOpen(false)}
+        title="Invite Join Code Established"
+        description={`Secure join code established for workspace "${selectedOrgForCode?.name}".`}
+      >
+        <div className="space-y-5 text-center p-2">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Distribute this secure token to invited workspace members. It is valid for single organization code links.
+          </p>
+          <div className="py-4 px-6 border border-dashed border-orange-500/30 bg-orange-500/5 rounded-lg text-2xl font-extrabold tracking-widest font-mono text-orange-500 select-all cursor-pointer">
+            {generatedCode}
+          </div>
+          <Button onClick={() => setInviteModalOpen(false)} className="w-full">
+            Done
+          </Button>
+        </div>
+      </Modal>
+
+      {/* 7. Delete confirmation modal (Super Admin only) */}
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        title="Confirm Organization Deletion"
+        description={`Permanently delete the workspace partition "${orgToDelete?.name}" and all of its data. This action is irreversible.`}
+      >
+        <div className="space-y-4 text-sm">
+          <p className="text-xs text-muted-foreground">This will remove the organization. You may choose to permanently delete all stored data which is irreversible. Ensure you have backups.</p>
+          <div className="flex items-center gap-2">
+            <input id="permanentDelete" type="checkbox" checked={permanentDelete} onChange={(e) => setPermanentDelete(e.target.checked)} className="w-4 h-4" />
+            <label htmlFor="permanentDelete" className="text-xs font-semibold">Permanently delete (irreversible)</label>
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>Yes, Delete</Button>
+          </div>
+        </div>
       </Modal>
 
     </div>
