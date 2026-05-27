@@ -28,12 +28,8 @@ import ResetPassword from './pages/ResetPassword.jsx';
 import Verify2FA from './pages/Verify2FA.jsx';
 
 import Organizations from './pages/Organizations.jsx';
-import Billing from './pages/Billing.jsx';
-import FeatureControls from './pages/FeatureControls.jsx';
-import Security from './pages/Security.jsx';
 import Analytics from './pages/Analytics.jsx';
 import AuditLogs from './pages/AuditLogs.jsx';
-import SystemHealth from './pages/SystemHealth.jsx';
 
 import Employees from './pages/Employees.jsx';
 import Roles from './pages/Roles.jsx';
@@ -83,13 +79,12 @@ function App() {
                   <Route path="/settings" element={<Settings />} />
 
                   {/* Super Admin Workspace Routes */}
-                  <Route path="/organizations" element={<Organizations />} />
-                  <Route path="/billing" element={<Billing />} />
-                  <Route path="/features" element={<FeatureControls />} />
-                  <Route path="/security" element={<Security />} />
+                  <Route path="/superadmin/organizations" element={<Organizations />} />
+                  <Route path="/superadmin/settings" element={<Settings />} />
+
+                  {/* Shared Admin Routes */}
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/audit" element={<AuditLogs />} />
-                  <Route path="/health" element={<SystemHealth />} />
 
                   {/* Organization Admin Workspace Routes */}
                   <Route path="/employees" element={<Employees />} />

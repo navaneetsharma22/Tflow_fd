@@ -58,15 +58,8 @@ const DashboardLayout = () => {
   const [notificationFilter, setNotificationFilter] = useState('ALL'); // 'ALL', 'UNREAD'
 
   const superAdminItems = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Organizations', path: '/organizations', icon: Building },
-    { name: 'Plans & Billing', path: '/billing', icon: DollarSign },
-    { name: 'Feature Controls', path: '/features', icon: Sliders },
-    { name: 'Security', path: '/security', icon: ShieldAlert },
-    { name: 'Analytics', path: '/analytics', icon: TrendingUp },
-    { name: 'Audit Logs', path: '/audit', icon: ScrollText },
-    { name: 'System Health', path: '/health', icon: Activity },
-    { name: 'Profile Settings', path: '/settings', icon: Settings },
+    { name: 'Organizations', path: '/superadmin/organizations', icon: Building },
+    { name: 'Settings', path: '/superadmin/settings', icon: Settings },
   ];
 
   const orgAdminItems = [

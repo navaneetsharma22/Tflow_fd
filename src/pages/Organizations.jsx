@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Filter, ShieldAlert, Key, UserMinus, UserCheck, ChevronLeft, ChevronRight, X, Building, Check } from 'lucide-react';
+import { Plus, Search, ChevronLeft, ChevronRight, X, Building, Key, UserMinus, UserCheck } from 'lucide-react';
 import { Button } from '../components/ui/Button.jsx';
 import { Input } from '../components/ui/Input.jsx';
 import { Badge } from '../components/ui/Badge.jsx';
@@ -12,101 +12,150 @@ import api from '../lib/api.js';
 
 const Organizations = () => {
   const { toast } = useToast();
-  
+  const { user } = useAuth();
+
   // Data States
-  const [orgs, setOrgs] = useState([
-    { id: '1', name: 'Acme SaaS Corp', slug: 'acme-corp', status: 'ACTIVE', users: 14, storage: '12.4 GB / 50 GB', code: 'TF-ACM-92' },
-    { id: '2', name: 'Stark Industries', slug: 'stark-ind', status: 'ACTIVE', users: 48, storage: '44.8 GB / 100 GB', code: 'TF-STK-08' },
-    { id: '3', name: 'Cyberdyne Systems', slug: 'cyberdyne', status: 'SUSPENDED', users: 3, storage: '1.2 GB / 10 GB', code: 'TF-CYB-66' },
-    { id: '4', name: 'Umbrella Research', slug: 'umbrella', status: 'TRIAL', users: 8, storage: '4.5 GB / 20 GB', code: 'TF-UMB-19' },
-    { id: '5', name: 'Wayne Enterprises', slug: 'wayne-ent', status: 'ACTIVE', users: 32, storage: '28.1 GB / 80 GB', code: 'TF-WYN-77' },
-  ]);
+  const [orgs, setOrgs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // UI Control States
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   // Modals
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
-  
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+
   // Create Form States
   const [newOrgName, setNewOrgName] = useState('');
-  const [newOrgSlug, setNewOrgSlug] = useState('');
-  const [newOrgLimit, setNewOrgLimit] = useState('50');
+  const [newOrgPlan, setNewOrgPlan] = useState('FREE_TRIAL');
+  const [createLoading, setCreateLoading] = useState(false);
 
   // Generated Code State
   const [generatedCode, setGeneratedCode] = useState('');
   const [selectedOrgForCode, setSelectedOrgForCode] = useState(null);
 
+  // Delete State
+  const [orgToDelete, setOrgToDelete] = useState(null);
+  const [permanentDelete, setPermanentDelete] = useState(false);
+
+  // ==========================================
+  // Load organizations from backend
+  // ==========================================
+  const fetchOrganizations = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/superadmin/organizations');
+      const payload = response.data?.data ?? response.data;
+      const items = Array.isArray(payload) ? payload : [];
+      setOrgs(items);
+    } catch (err) {
+      toast({
+        title: 'Failed to Load Organizations',
+        description: err.response?.data?.message || 'Could not reach the backend server.',
+        variant: 'destructive',
+      });
+      setOrgs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrganizations();
+  }, []);
+
+  // ==========================================
   // Pagination Logic
-  const itemsPerPage = 5;
+  // ==========================================
+  const itemsPerPage = 8;
   const filteredOrgs = orgs.filter((org) => {
-    const matchesSearch = org.name.toLowerCase().includes(search.toLowerCase()) || org.slug.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch =
+      (org.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (org.code || '').toLowerCase().includes(search.toLowerCase());
     const matchesFilter = filterStatus === 'ALL' || org.status === filterStatus;
     return matchesSearch && matchesFilter;
   });
 
   const totalPages = Math.ceil(filteredOrgs.length / itemsPerPage);
-  const paginatedOrgs = filteredOrgs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const paginatedOrgs = filteredOrgs.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
-  // Handlers
-  const handleCreateOrg = (e) => {
+  // ==========================================
+  // Create Organization
+  // ==========================================
+  const handleCreateOrg = async (e) => {
     e.preventDefault();
-    if (!newOrgName || !newOrgSlug) {
-      toast({ title: 'Validation Error', description: 'Name and slug fields are required.', variant: 'warning' });
+    if (!newOrgName.trim()) {
+      toast({ title: 'Validation Error', description: 'Organization name is required.', variant: 'warning' });
       return;
     }
 
-    const newOrg = {
-      id: (orgs.length + 1).toString(),
-      name: newOrgName,
-      slug: newOrgSlug,
-      status: 'ACTIVE',
-      users: 1,
-      storage: `0 GB / ${newOrgLimit} GB`,
-      code: `TF-${newOrgSlug.slice(0, 3).toUpperCase()}-${Math.floor(10 + Math.random() * 90)}`,
-    };
-
-    setOrgs([...orgs, newOrg]);
-    setCreateModalOpen(false);
-    setNewOrgName('');
-    setNewOrgSlug('');
-    toast({ title: 'Workspace Established', description: `Tenant partition "${newOrgName}" successfully created!`, variant: 'success' });
+    setCreateLoading(true);
+    try {
+      const response = await api.post('/superadmin/organizations', {
+        name: newOrgName.trim(),
+        subscriptionPlan: newOrgPlan,
+      });
+      const created = response.data?.data ?? response.data;
+      toast({
+        title: 'Organization Created',
+        description: `Workspace "${created.name}" established with code ${created.code}.`,
+        variant: 'success',
+      });
+      setCreateModalOpen(false);
+      setNewOrgName('');
+      setNewOrgPlan('FREE_TRIAL');
+      fetchOrganizations();
+    } catch (err) {
+      toast({
+        title: 'Creation Failed',
+        description: err.response?.data?.message || 'Could not create organization.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCreateLoading(false);
+    }
   };
 
-  const handleGenerateCode = (org) => {
+  // ==========================================
+  // Show Invite Code
+  // ==========================================
+  const handleShowCode = (org) => {
     setSelectedOrgForCode(org);
-    const newCode = `TF-${org.slug.slice(0, 3).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
-    setGeneratedCode(newCode);
+    setGeneratedCode(org.code);
     setInviteModalOpen(true);
   };
 
-  const handleToggleSuspend = (id) => {
-    setOrgs((prev) =>
-      prev.map((o) => {
-        if (o.id === id) {
-          const wasActive = o.status === 'ACTIVE';
-          const newStatus = wasActive ? 'SUSPENDED' : 'ACTIVE';
-          toast({
-            title: wasActive ? 'Tenant Suspended' : 'Tenant Restored',
-            description: `Workspace partition "${o.name}" status set to ${newStatus}.`,
-            variant: wasActive ? 'destructive' : 'success',
-          });
-          return { ...o, status: newStatus };
-        }
-        return o;
-      })
-    );
+  // ==========================================
+  // Toggle Suspend / Restore
+  // ==========================================
+  const handleToggleSuspend = async (org) => {
+    const newStatus = org.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+    try {
+      await api.patch(`/superadmin/organizations/${org._id}/status`, { status: newStatus });
+      toast({
+        title: newStatus === 'SUSPENDED' ? 'Tenant Suspended' : 'Tenant Restored',
+        description: `"${org.name}" status changed to ${newStatus}.`,
+        variant: newStatus === 'SUSPENDED' ? 'destructive' : 'success',
+      });
+      fetchOrganizations();
+    } catch (err) {
+      toast({
+        title: 'Status Update Failed',
+        description: err.response?.data?.message || 'Could not update organization status.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  // Super Admin delete flow
-  const { user } = useAuth();
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [orgToDelete, setOrgToDelete] = useState(null);
-  const [permanentDelete, setPermanentDelete] = useState(false);
-
+  // ==========================================
+  // Delete Organization
+  // ==========================================
   const openDeleteModal = (org) => {
     setOrgToDelete(org);
     setDeleteModalOpen(true);
@@ -115,19 +164,23 @@ const Organizations = () => {
   const handleConfirmDelete = async () => {
     if (!orgToDelete) return;
     try {
-      // Attempt backend deletion (requires SUPER_ADMIN privileges)
       if (permanentDelete) {
-        // include explicit confirm query param to satisfy server-side safeguard
-        await api.delete(`/superadmin/organizations/${orgToDelete.id}/permanent?confirm=1`);
+        await api.delete(`/superadmin/organizations/${orgToDelete._id}/permanent?confirm=1`);
       } else {
-        await api.delete(`/superadmin/organizations/${orgToDelete.id}`);
+        await api.delete(`/superadmin/organizations/${orgToDelete._id}`);
       }
-      setOrgs((prev) => prev.filter((o) => o.id !== orgToDelete.id));
-      toast({ title: permanentDelete ? 'Organization Permanently Removed' : 'Organization Removed', description: `${orgToDelete.name} has been removed.`, variant: 'success' });
+      toast({
+        title: permanentDelete ? 'Permanently Removed' : 'Organization Removed',
+        description: `${orgToDelete.name} has been deleted.`,
+        variant: 'success',
+      });
+      fetchOrganizations();
     } catch (err) {
-      // If backend not available, fall back to local removal for demo mode
-      setOrgs((prev) => prev.filter((o) => o.id !== orgToDelete.id));
-      toast({ title: 'Deletion Simulated', description: `Removed ${orgToDelete.name} locally (backend may be unavailable).`, variant: 'warning' });
+      toast({
+        title: 'Deletion Failed',
+        description: err.response?.data?.message || 'Could not delete organization.',
+        variant: 'destructive',
+      });
     } finally {
       setDeleteModalOpen(false);
       setOrgToDelete(null);
@@ -135,19 +188,28 @@ const Organizations = () => {
     }
   };
 
+  // ==========================================
+  // Helper: Plan badge color
+  // ==========================================
+  const planBadgeVariant = (plan) => {
+    if (plan === 'ENTERPRISE') return 'primary';
+    if (plan === 'GROWTH') return 'warning';
+    return 'secondary';
+  };
+
   return (
     <div className="space-y-6">
-      
+
       {/* 1. Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Organizations Workspace</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight">Organizations</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Administer active multi-tenant organization partitions, allocations, and limits.
+            Create and manage multi-tenant organization workspaces.
           </p>
         </div>
         <Button onClick={() => setCreateModalOpen(true)} className="self-start sm:self-auto shrink-0">
-          <Plus className="h-4.5 w-4.5 mr-2" /> Establish Workspace
+          <Plus className="h-4.5 w-4.5 mr-2" /> Create Organization
         </Button>
       </div>
 
@@ -159,14 +221,14 @@ const Organizations = () => {
             type="text"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-            placeholder="Search tenant name or path slug..."
+            placeholder="Search by name or code..."
             className="w-full pl-10 pr-4 py-2 bg-muted/20 border border-border rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
           />
         </div>
 
         {/* Status Filters */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
-          {['ALL', 'ACTIVE', 'SUSPENDED', 'TRIAL'].map((status) => (
+          {['ALL', 'ACTIVE', 'SUSPENDED', 'TRIAL_EXPIRED'].map((status) => (
             <button
               key={status}
               onClick={() => { setFilterStatus(status); setCurrentPage(1); }}
@@ -176,7 +238,7 @@ const Organizations = () => {
                   : 'border-border bg-card/40 text-muted-foreground hover:text-foreground'
               }`}
             >
-              {status}
+              {status === 'TRIAL_EXPIRED' ? 'EXPIRED' : status}
             </button>
           ))}
         </div>
@@ -184,66 +246,76 @@ const Organizations = () => {
 
       {/* 3. Table Listing */}
       <div className="bg-card/40 backdrop-blur-md border border-border rounded-lg overflow-hidden soft-shadow">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Organization Name</TableHead>
-              <TableHead>Slug Prefix</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Active Users</TableHead>
-              <TableHead>Storage Usage</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedOrgs.length > 0 ? (
-              paginatedOrgs.map((org) => (
-                <TableRow key={org.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 font-bold shrink-0">
-                        <Building className="h-4 w-4" />
+        {loading ? (
+          <div className="flex items-center justify-center p-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-500 border-t-transparent" />
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Organization</TableHead>
+                <TableHead>Code</TableHead>
+                <TableHead>Plan</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedOrgs.length > 0 ? (
+                paginatedOrgs.map((org) => (
+                  <TableRow key={org._id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-8 w-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 font-bold shrink-0">
+                          <Building className="h-4 w-4" />
+                        </div>
+                        <span className="font-bold text-foreground">{org.name}</span>
                       </div>
-                      <span className="font-bold text-foreground">{org.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{org.slug}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        org.status === 'ACTIVE'
-                          ? 'success'
-                          : org.status === 'SUSPENDED'
-                          ? 'destructive'
-                          : 'warning'
-                      }
-                    >
-                      {org.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-xs font-semibold">{org.users} Members</TableCell>
-                  <TableCell className="text-xs font-mono text-muted-foreground">{org.storage}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button
-                        onClick={() => handleGenerateCode(org)}
-                        className="p-1.5 rounded-md hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                        title="Generate Invite Code"
-                      >
-                        <Key className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleToggleSuspend(org.id)}
-                        className={`p-1.5 rounded-md hover:bg-muted/50 transition-colors cursor-pointer ${
+                    </TableCell>
+                    <TableCell className="font-mono text-xs font-bold text-orange-500">{org.code}</TableCell>
+                    <TableCell>
+                      <Badge variant={planBadgeVariant(org.subscriptionPlan)} className="text-[9px] font-extrabold">
+                        {org.subscriptionPlan}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
                           org.status === 'ACTIVE'
-                            ? 'text-rose-500 hover:text-rose-600'
-                            : 'text-emerald-500 hover:text-emerald-600'
-                        }`}
-                        title={org.status === 'ACTIVE' ? 'Suspend Partition' : 'Restore Partition'}
+                            ? 'success'
+                            : org.status === 'SUSPENDED'
+                            ? 'destructive'
+                            : 'warning'
+                        }
                       >
-                        {org.status === 'ACTIVE' ? <UserMinus className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                      </button>
-                      {user?.role === 'SUPER_ADMIN' && (
+                        {org.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs font-mono text-muted-foreground">
+                      {org.createdAt ? new Date(org.createdAt).toLocaleDateString() : '—'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => handleShowCode(org)}
+                          className="p-1.5 rounded-md hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                          title="View Organization Code"
+                        >
+                          <Key className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleToggleSuspend(org)}
+                          className={`p-1.5 rounded-md hover:bg-muted/50 transition-colors cursor-pointer ${
+                            org.status === 'ACTIVE'
+                              ? 'text-rose-500 hover:text-rose-600'
+                              : 'text-emerald-500 hover:text-emerald-600'
+                          }`}
+                          title={org.status === 'ACTIVE' ? 'Suspend' : 'Restore'}
+                        >
+                          {org.status === 'ACTIVE' ? <UserMinus className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                        </button>
                         <button
                           onClick={() => openDeleteModal(org)}
                           className="p-1.5 rounded-md hover:bg-muted/50 text-rose-500 hover:text-rose-600 transition-colors cursor-pointer"
@@ -251,26 +323,29 @@ const Organizations = () => {
                         >
                           <X className="h-4 w-4" />
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center p-8 text-muted-foreground">
+                    {orgs.length === 0
+                      ? 'No organizations found. Create your first workspace above.'
+                      : 'No matching organizations found.'}
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center p-8 text-muted-foreground">
-                  No matching organization partitions found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              )}
+            </TableBody>
+          </Table>
+        )}
 
         {/* 4. Pagination Footer */}
         {totalPages > 1 && (
           <div className="px-5 py-4 border-t border-border flex items-center justify-between text-xs font-semibold select-none bg-muted/10">
             <span className="text-muted-foreground">
               Page <span className="text-foreground">{currentPage}</span> of {totalPages}
+              <span className="ml-3 text-muted-foreground/70">({filteredOrgs.length} total)</span>
             </span>
             <div className="flex items-center gap-1.5">
               <button
@@ -296,60 +371,48 @@ const Organizations = () => {
       <Modal
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        title="Establish Organization Partition"
-        description="Configure dynamic allocation limits and access slugs for your new tenant partition."
+        title="Create Organization"
+        description="Set up a new tenant workspace. An access code will be generated automatically."
       >
         <form onSubmit={handleCreateOrg} className="space-y-4">
           <Input
             type="text"
-            label="Organization Title"
-            placeholder="e.g. Wayland Cybernetics"
+            label="Organization Name"
+            placeholder="e.g. Acme Corp"
             value={newOrgName}
-            onChange={(e) => {
-              setNewOrgName(e.target.value);
-              setNewOrgSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
-            }}
-            required
-          />
-          <Input
-            type="text"
-            label="Path Slug Prefix (URL)"
-            placeholder="e.g. wayland-cyber"
-            value={newOrgSlug}
-            onChange={(e) => setNewOrgSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-'))}
+            onChange={(e) => setNewOrgName(e.target.value)}
             required
           />
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-foreground/85 uppercase tracking-wide">Storage Limits Allocation</label>
+            <label className="text-xs font-bold text-foreground/85 uppercase tracking-wide">Subscription Plan</label>
             <select
-              value={newOrgLimit}
-              onChange={(e) => setNewOrgLimit(e.target.value)}
+              value={newOrgPlan}
+              onChange={(e) => setNewOrgPlan(e.target.value)}
               className="w-full rounded-lg border border-border bg-muted/20 px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-foreground"
             >
-              <option value="10" className="bg-card">10 GB Plan</option>
-              <option value="50" className="bg-card">50 GB Plan</option>
-              <option value="100" className="bg-card">100 GB Plan</option>
-              <option value="500" className="bg-card">500 GB Custom Plan</option>
+              <option value="FREE_TRIAL" className="bg-card">Free Trial (10 users, 5 GB)</option>
+              <option value="GROWTH" className="bg-card">Growth (50 users, 50 GB)</option>
+              <option value="ENTERPRISE" className="bg-card">Enterprise (Unlimited)</option>
             </select>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-border/50">
-            <Button onClick={() => setCreateModalOpen(false)} variant="outline">Cancel</Button>
-            <Button type="submit">Establish Partition</Button>
+            <Button type="button" onClick={() => setCreateModalOpen(false)} variant="outline">Cancel</Button>
+            <Button type="submit" loading={createLoading}>Create Organization</Button>
           </div>
         </form>
       </Modal>
 
-      {/* 6. generated invite code Modal */}
+      {/* 6. Organization Code Modal */}
       <Modal
         isOpen={inviteModalOpen}
         onClose={() => setInviteModalOpen(false)}
-        title="Invite Join Code Established"
-        description={`Secure join code established for workspace "${selectedOrgForCode?.name}".`}
+        title="Organization Access Code"
+        description={`Share this code with members who need to join "${selectedOrgForCode?.name}".`}
       >
         <div className="space-y-5 text-center p-2">
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Distribute this secure token to invited workspace members. It is valid for single organization code links.
+            Members enter this code during registration to join the organization workspace.
           </p>
           <div className="py-4 px-6 border border-dashed border-orange-500/30 bg-orange-500/5 rounded-lg text-2xl font-extrabold tracking-widest font-mono text-orange-500 select-all cursor-pointer">
             {generatedCode}
@@ -360,15 +423,17 @@ const Organizations = () => {
         </div>
       </Modal>
 
-      {/* 7. Delete confirmation modal (Super Admin only) */}
+      {/* 7. Delete Confirmation Modal */}
       <Modal
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
-        title="Confirm Organization Deletion"
-        description={`Permanently delete the workspace partition "${orgToDelete?.name}" and all of its data. This action is irreversible.`}
+        title="Delete Organization"
+        description={`Remove the workspace "${orgToDelete?.name}" and all associated data.`}
       >
         <div className="space-y-4 text-sm">
-          <p className="text-xs text-muted-foreground">This will remove the organization. You may choose to permanently delete all stored data which is irreversible. Ensure you have backups.</p>
+          <p className="text-xs text-muted-foreground">
+            This will remove the organization. Check the box below for irreversible permanent deletion.
+          </p>
           <div className="flex items-center gap-2">
             <input id="permanentDelete" type="checkbox" checked={permanentDelete} onChange={(e) => setPermanentDelete(e.target.checked)} className="w-4 h-4" />
             <label htmlFor="permanentDelete" className="text-xs font-semibold">Permanently delete (irreversible)</label>

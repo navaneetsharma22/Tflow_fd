@@ -13,7 +13,7 @@ const SuperAdminLogin = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const superAdminOrgCode = import.meta.env.VITE_SUPER_ADMIN_ORG_CODE || '';
+  const superAdminOrgCode = import.meta.env.VITE_SUPER_ADMIN_ORG_CODE || 'TF-PLATFORM';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,7 +53,7 @@ const SuperAdminLogin = () => {
         description: `Welcome back, ${user.name}.`,
         variant: 'success',
       });
-      navigate('/');
+      navigate('/superadmin/organizations');
     } catch (err) {
       setError(
         err.response?.data?.message ||
