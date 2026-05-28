@@ -23,7 +23,7 @@ const Input = React.forwardRef(({ className, type = 'text', label, error, icon: 
         <input
           type={inputType}
           className={cn(
-            'flex h-11 w-full rounded-lg border border-border bg-muted/20 px-4 py-2 text-sm transition-all duration-200 file:border-0 file:bg-transparent file:text-sm file:font-semibold placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50',
+            'flex h-11 w-full rounded-lg border border-border bg-muted/20 px-4 py-2 text-sm transition-all duration-200 file:border-0 file:bg-transparent file:text-sm file:font-semibold placeholder:text-muted-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50',
             Icon && 'pl-11',
             isPassword && 'pr-12',
             error && 'border-destructive focus-visible:ring-destructive/20 focus-visible:border-destructive',

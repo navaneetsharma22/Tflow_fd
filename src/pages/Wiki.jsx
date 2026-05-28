@@ -144,7 +144,7 @@ const Wiki = () => {
                   placeholder="Search wiki..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-muted/40 border border-border rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-orange-500/40"
+                  className="w-full bg-muted/40 border border-border rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-orange-500/40 placeholder:text-muted-foreground/40"
                 />
               </div>
 

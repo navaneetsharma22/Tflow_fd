@@ -293,7 +293,7 @@ const Organizations = () => {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
             placeholder="Search by name or code..."
-            className="w-full pl-10 pr-4 py-2 bg-muted/20 border border-border rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+            className="w-full pl-10 pr-4 py-2 bg-muted/20 border border-border rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 placeholder:text-muted-foreground/40"
           />
         </div>
 
@@ -500,7 +500,7 @@ const Organizations = () => {
                 <select
                   value={industry}
                   onChange={(e) => setIndustry(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-muted/20 px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-foreground"
+                  className={`w-full rounded-lg border border-border bg-muted/20 px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 ${!industry ? 'text-muted-foreground/40' : 'text-foreground'}`}
                 >
                   <option value="" className="bg-card">Select Industry...</option>
                   <option value="Technology" className="bg-card">Technology & Software</option>
@@ -519,7 +519,7 @@ const Organizations = () => {
                 <select
                   value={companySize}
                   onChange={(e) => setCompanySize(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-muted/20 px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-foreground"
+                  className={`w-full rounded-lg border border-border bg-muted/20 px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 ${!companySize ? 'text-muted-foreground/40' : 'text-foreground'}`}
                 >
                   <option value="" className="bg-card">Select Size...</option>
                   <option value="1-10" className="bg-card">1 - 10 employees</option>
@@ -531,13 +531,39 @@ const Organizations = () => {
               </div>
             </div>
 
-            <Input
-              type="url"
-              label="Company Website URL"
-              placeholder="https://www.company.com"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                type="email"
+                label="Company Contact Email"
+                placeholder="contact@company.com"
+                value={companyEmail}
+                onChange={(e) => setCompanyEmail(e.target.value)}
+              />
+              <Input
+                type="text"
+                label="Company Phone Number"
+                placeholder="+1 (555) 019-2834"
+                value={companyPhone}
+                onChange={(e) => setCompanyPhone(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                type="url"
+                label="Company Website URL"
+                placeholder="https://www.company.com"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+              />
+              <Input
+                type="text"
+                label="Headquarter Address"
+                placeholder="e.g. San Francisco, CA"
+                value={companyAddress}
+                onChange={(e) => setCompanyAddress(e.target.value)}
+              />
+            </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-foreground/85 uppercase tracking-wide">Company Description</label>
@@ -546,7 +572,7 @@ const Organizations = () => {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe your organization's core business, services, or goals..."
                 rows={3}
-                className="w-full rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-foreground placeholder:text-muted-foreground/60 resize-none"
+                className="w-full rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-foreground placeholder:text-muted-foreground/40 resize-none"
               />
             </div>
           </div>

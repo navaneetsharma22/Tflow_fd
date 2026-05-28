@@ -5,7 +5,7 @@ import { useToast } from '../components/ui/Toast.jsx';
 import { Input } from '../components/ui/Input.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { motion } from 'framer-motion';
-import { Mail, Lock, ArrowRight, Building } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Building, User } from 'lucide-react';
 import api from '../lib/api.js';
 import { TaskFlowLogo } from '../components/ui/Typography.jsx';
 
@@ -15,8 +15,8 @@ const Login = () => {
   const { toast } = useToast();
   
   const [email, setEmail] = useState('');
+  const [employeeId, setEmployeeId] = useState('');
   const [password, setPassword] = useState('');
-  const [organizationCode, setOrganizationCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -26,19 +26,21 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // Direct call to our secure backend Auth API
-      const response = await api.post('/auth/login', { email, password, organizationCode });
-      const payload = response.data?.data ?? response.data;
-      const token = payload?.token || payload?.accessToken;
-      const user = payload?.user;
+      const payload = { email, employeeId, password };
 
-      if (!token || !user) {
+      // Direct call to our secure backend Auth API
+      const response = await api.post('/auth/login', payload);
+      const payloadData = response.data?.data ?? response.data;
+      const token = payloadData?.token || payloadData?.accessToken;
+      const userPayload = payloadData?.user;
+
+      if (!token || !userPayload) {
         throw new Error('Invalid auth response received from the backend.');
       }
       
       // If user has 2FA enabled, redirect to Verification screen
-      if (user?.twoFactorEnabled) {
-        login(token, user);
+      if (userPayload?.twoFactorEnabled) {
+        login(token, userPayload);
         toast({
           title: '2FA Verification Required',
           description: 'Please verify using your multi-factor auth code.',
@@ -48,10 +50,10 @@ const Login = () => {
         return;
       }
 
-      login(token, user);
+      login(token, userPayload);
       toast({
         title: 'Sign In Successful',
-        description: `Welcome back to TaskFlow, ${user.name}!`,
+        description: `Welcome back to TaskFlow, ${userPayload.name}!`,
         variant: 'success',
       });
       navigate('/');
@@ -74,6 +76,7 @@ const Login = () => {
       className="p-5 border border-border bg-card/40 backdrop-blur-xl rounded-lg shadow-xl space-y-5 w-full max-w-md"
     >
       <TaskFlowLogo variant="inline" size="xs" showTagline={false} className="mb-1" wordmarkClassName="text-lg" />
+      
       <div className="space-y-1">
         <h2 className="text-2xl font-extrabold tracking-tight">Welcome Back</h2>
         <p className="text-muted-foreground text-xs">
@@ -88,18 +91,17 @@ const Login = () => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Workspace Code Input */}
+        {/* Employee ID Input */}
         <Input
           type="text"
-          label="Workspace Organization Code"
-          icon={Building}
-          placeholder="TF2"
-          value={organizationCode}
-          onChange={(e) => setOrganizationCode(e.target.value)}
-          required
+          label="Employee ID"
+          icon={User}
+          placeholder="e.g. EMP001"
+          value={employeeId}
+          onChange={(e) => setEmployeeId(e.target.value)}
         />
 
-        {/* Email Input */}
+        {/* Email Sign In Input */}
         <Input
           type="email"
           label="Email Address"
@@ -134,13 +136,7 @@ const Login = () => {
         </Button>
       </form>
 
-      <div className="text-center text-xs text-muted-foreground space-y-2 pt-2 border-t border-border/30">
-        <div>
-          Don't have an account?{' '}
-          <Link to="/register" className="text-orange-500 hover:text-orange-400 font-bold transition-colors">
-            Create Workspace
-          </Link>
-        </div>
+      <div className="text-center text-xs text-muted-foreground pt-2 border-t border-border/30">
         <div>
           Got an invite code?{' '}
           <Link to="/org-code" className="text-orange-500 hover:text-orange-400 font-bold transition-colors">

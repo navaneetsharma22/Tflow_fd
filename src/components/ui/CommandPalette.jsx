@@ -114,7 +114,7 @@ const CommandPalette = ({ isOpen, onClose }) => {
                   setSelectedIndex(0);
                 }}
                 placeholder="Search projects, tasks, users, comments..."
-                className="w-full h-12 bg-transparent text-sm text-foreground focus:outline-none placeholder:text-muted-foreground"
+                className="w-full h-12 bg-transparent text-sm text-foreground focus:outline-none placeholder:text-muted-foreground/40"
               />
               <span className="text-[10px] font-bold text-muted-foreground bg-muted border border-border px-1.5 py-0.5 rounded uppercase select-none">
                 ESC
